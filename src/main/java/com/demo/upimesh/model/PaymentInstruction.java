@@ -1,0 +1,51 @@
+package com.demo.upimesh.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+
+/**
+ * The actual payment instruction. After the server decrypts MeshPacket.ciphertext,
+ * it gets one of these.
+ *
+ * Critical fields for security:
+ *   - nonce: a UUID unique to this payment. Even if everything else were identical
+ *            for two legitimate payments (alice sends bob ₹100 twice), the nonces
+ *            differ, so the resulting ciphertexts and their hashes also differ.
+ *   - signedAt: lets the server reject stale packets ("freshness window"). Without
+ *               this, an attacker who got the ciphertext could replay it weeks later.
+ *   - pinHash: in a real system the user enters a UPI PIN; we'd verify it against
+ *              a hash held by the bank. Here we just record it for realism.
+ */
+@Entity
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+public class PaymentInstruction {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String senderVpa;
+    private String receiverVpa;
+    private BigDecimal amount;
+    private String nonce;     // UUID, unique per payment intent
+    private Long signedAt;    // epoch millis, when sender signed
+
+
+    public PaymentInstruction(String senderVpa, String receiverVpa, BigDecimal amount, String nonce, long signedAt) {
+        this.senderVpa = senderVpa;
+        this.receiverVpa = receiverVpa;
+        this.amount = amount;
+        this.nonce = nonce;
+        this.signedAt = signedAt;
+    }
+}
