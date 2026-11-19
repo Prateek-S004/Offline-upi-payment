@@ -1,6 +1,7 @@
 package com.demo.upimesh.service;
 
 import com.demo.upimesh.model.MeshPacket;
+import com.demo.upimesh.model.VirtualDevice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

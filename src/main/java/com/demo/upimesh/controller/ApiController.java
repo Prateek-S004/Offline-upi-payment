@@ -1,9 +1,10 @@
 package com.demo.upimesh.controller;
 
 import com.demo.upimesh.crypto.ServerKeyHolder;
+import com.demo.upimesh.dto.AccountResponse;
 import com.demo.upimesh.model.*;
 import com.demo.upimesh.service.*;
-import dto.TransactionReceipt;
+import com.demo.upimesh.dto.TransactionReceipt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -173,8 +174,15 @@ public class ApiController {
     // ------------------------------------------------------------- accounts
 
     @GetMapping("/accounts")
-    public List<Account> listAccounts() {
-        return accountRepo.findAll();
+    public List<AccountResponse> listAccounts() {
+        return accountRepo.findAll()
+                .stream()
+                .map(account -> new AccountResponse(
+                        account.getVpa(),
+                        account.getHolderName(),
+                        account.getBalance()
+                ))
+                .toList();
     }
 
     @GetMapping("/transactions")

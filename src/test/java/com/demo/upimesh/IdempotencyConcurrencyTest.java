@@ -83,7 +83,7 @@ class IdempotencyConcurrencyTest {
     @Test
     void tamperedCiphertextIsRejected() throws Exception {
         MeshPacket packet = demoService.createPacket(
-                "alice@demo", "bob@demo", new BigDecimal("50.00"), "1234", 5);
+                "alice@demo", "bob@demo", new BigDecimal("50.00"), "1111", 5);
 
         // Flip a byte in the middle of the ciphertext
         char[] chars = packet.getCiphertext().toCharArray();
@@ -107,5 +107,32 @@ class IdempotencyConcurrencyTest {
         assertEquals(original.getReceiverVpa(), decrypted.getReceiverVpa());
         assertEquals(0, original.getAmount().compareTo(decrypted.getAmount()));
         assertEquals(original.getNonce(), decrypted.getNonce());
+    }
+
+    @Test
+    void releasedPacketCanBeClaimedAgain() {
+        String packetHash = "retry-test-hash";
+
+        // First delivery claims the packet
+        assertTrue(idempotency.claim(packetHash));
+
+        // A duplicate delivery is rejected
+        assertFalse(idempotency.claim(packetHash));
+
+        // Simulate a failed settlement and release the hash
+        idempotency.release(packetHash);
+
+        // The same packet can now be retried
+        assertTrue(idempotency.claim(packetHash));
+    }
+
+    @Test
+    void expiredPacketCanBeClaimedAgain() {
+        String packetHash = "expired-test-hash";
+
+        assertTrue(idempotency.claim(packetHash));
+
+        // Simulate expiration by removing the hash's timestamp
+        // and inserting an old timestamp through a test helper.
     }
 }

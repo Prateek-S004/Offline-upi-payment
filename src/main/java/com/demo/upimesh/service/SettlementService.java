@@ -41,7 +41,7 @@ public class SettlementService {
     public Transaction settle(PaymentInstruction instruction, String packetHash,
                               String bridgeNodeId, int hopCount) {
 
-        Account sender = accounts.findById(instruction.getSenderVpa())
+        Account sender = accounts.findByVpaForUpdate(instruction.getSenderVpa())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Unknown sender VPA: " + instruction.getSenderVpa()));
 

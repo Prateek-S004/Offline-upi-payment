@@ -38,14 +38,12 @@ public class BridgeIngestionService {
 
     public IngestResult ingest(MeshPacket packet, String bridgeNodeId, int hopCount) {
         try {
-            String packetHash = crypto.hashCiphertext(packet.getCiphertext());
-
-            // ---- Idempotency gate ----
-            if (!idempotency.claim(packetHash)) {
-                log.info("DUPLICATE packet {} from bridge {} — dropped",
-                        packetHash.substring(0, 12) + "...", bridgeNodeId);
-                return IngestResult.duplicate(packetHash);
+            if (packet == null || packet.getCiphertext() == null
+                    || packet.getCiphertext().isBlank()) {
+                return IngestResult.invalid("?", "missing_ciphertext");
             }
+
+            String packetHash = crypto.hashCiphertext(packet.getCiphertext());
 
             // ---- Decrypt ----
             PaymentInstruction instruction;
@@ -68,13 +66,24 @@ public class BridgeIngestionService {
                 return IngestResult.invalid(packetHash, "future_dated");
             }
 
+            if (!idempotency.claim(packetHash)) {
+                log.info("DUPLICATE packet {} from bridge {} — dropped",
+                        packetHash.substring(0, 12) + "...", bridgeNodeId);
+                return IngestResult.duplicate(packetHash);
+            }
+
             // ---- Settle ----
-            Transaction tx = settlement.settle(instruction, packetHash, bridgeNodeId, hopCount);
-            return IngestResult.processed(packetHash, tx);
+            try {
+                Transaction tx = settlement.settle(instruction, packetHash, bridgeNodeId, hopCount);
+                return IngestResult.processed(packetHash, tx);
+            } catch (Exception e) {
+                idempotency.release(packetHash);
+                throw e;
+            }
 
         } catch (Exception e) {
             log.error("Ingestion error: {}", e.getMessage(), e);
-            return IngestResult.invalid("?", "internal_error: " + e.getMessage());
+            return IngestResult.invalid("?", "internal_error");
         }
     }
 

@@ -1,6 +1,5 @@
-package com.demo.upimesh.service;
+package com.demo.upimesh.model;
 
-import com.demo.upimesh.model.MeshPacket;
 import lombok.Getter;
 import lombok.Setter;
 

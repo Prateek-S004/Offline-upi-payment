@@ -3,6 +3,7 @@ package com.demo.upimesh.crypto;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.KeyPair;
@@ -10,6 +11,9 @@ import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Base64;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
 
 /**
  * Holds the server's RSA keypair.
@@ -27,14 +31,28 @@ public class ServerKeyHolder {
     private static final Logger log = LoggerFactory.getLogger(ServerKeyHolder.class);
 
     private KeyPair keyPair;
+    @Value("${upi.keystore.path}")
+    private String keystorePath;
+
+    @Value("${upi.keystore.password}")
+    private String keystorePassword;
 
     @PostConstruct
     public void init() throws Exception {
-        KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
-        gen.initialize(2048);
-        this.keyPair = gen.generateKeyPair();
-        log.info("Server RSA keypair generated (2048-bit). Public key fingerprint: {}",
-                getPublicKeyBase64().substring(0, 32) + "...");
+
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+
+        try (FileInputStream fis = new FileInputStream(keystorePath)) {
+            keyStore.load(fis, keystorePassword.toCharArray());
+        }
+
+        PrivateKey privateKey = (PrivateKey) keyStore.getKey("upi-server", keystorePassword.toCharArray());
+        Certificate certificate = keyStore.getCertificate("upi-server");
+        PublicKey publicKey = certificate.getPublicKey();
+
+        this.keyPair = new KeyPair(publicKey, privateKey);
+
+        log.info("Persistent RSA keypair loaded successfully.");
     }
 
     public PublicKey getPublicKey() {
